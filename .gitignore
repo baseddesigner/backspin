@@ -1,0 +1,5 @@
+# Your personal signing key, created by install.sh. Never commit it.
+signing/
+
+.DS_Store
+*.app
