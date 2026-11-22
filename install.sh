@@ -83,7 +83,15 @@ EOF
   rm -rf "$tmp"
 fi
 security unlock-keychain -p "" "$KC"
+# Up to macOS 26, codesign only finds identities in keychains on the search list,
+# even with --keychain. Add ours for this one call, then put the list back.
+others=("${(@f)$(security list-keychains -d user | sed -e 's/^ *"//' -e 's/"$//')}")
+others=("${(@)others:#$KC}")
+restore() { security list-keychains -d user -s "${others[@]}"; }
+trap restore EXIT
+security list-keychains -d user -s "$KC" "${others[@]}"
 codesign --force --sign "$CERT_NAME" --keychain "$KC" --identifier "$LABEL" "$APP"
+restore; trap - EXIT
 
 cat > "$AGENT" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

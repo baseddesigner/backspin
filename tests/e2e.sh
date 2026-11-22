@@ -12,7 +12,10 @@ err() { print -u2 "✗ $1"; fail=1; }
 # Past bug: updating while Backspin ran failed with "Bootstrap failed: 5",
 # because launchd hadn't finished stopping the old copy.
 for i in 1 2 3; do  # the race is intermittent, so restart more than once
-  ./install.sh >/dev/null || err "install #$i failed. install.sh must wait for launchctl bootout to finish before bootstrap."
+  if ! log=$(./install.sh 2>&1); then
+    hint=""; [[ $log == *"Bootstrap failed"* ]] && hint=" install.sh must wait for launchctl bootout to finish before bootstrap."
+    err "install #$i failed: ${log##*$'\n'}.$hint"
+  fi
   reqs[$i]=$(codesign -d -r- "$APP" 2>&1 | grep 'designated' | sed 's/^# //')
 done
 
