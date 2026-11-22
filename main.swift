@@ -1,15 +1,6 @@
 // Backspin — a tiny helper that reverses and smooths scrolling for wheel mice only.
 // Trackpad / Magic Mouse (continuous) events pass through untouched.
-//
-// Settings (read at launch):  defaults write io.github.baseddesigner.backspin <key> <value>
-//   reverseVertical   bool   (default true)
-//   reverseHorizontal bool   (default true)
-//   smooth            bool   (default true)
-//   step              float  minimum pixels per wheel notch (default 35)
-//   speed             float  multiplier on the system's accelerated delta (default 3)
-//   smoothing         float  easing time constant in seconds (default 0.08; higher = glidier)
-//   debug             bool   log every wheel event to the log file (default false)
-// Or run with --debug.
+// Settings and how it works: README.md.
 
 import AppKit
 import QuartzCore
@@ -27,7 +18,7 @@ struct Config {
     var debug = false
 
     static func load() -> Config {
-        let d = UserDefaults.standard // domain = bundle id "io.github.baseddesigner.backspin"
+        let d = UserDefaults.standard
         var c = Config()
         func b(_ k: String, _ v: inout Bool) { if d.object(forKey: k) != nil { v = d.bool(forKey: k) } }
         func n(_ k: String, _ v: inout Double) { if d.object(forKey: k) != nil { v = d.double(forKey: k) } }
@@ -51,7 +42,6 @@ func log(_ s: String) {
 
 // MARK: - Smooth animator
 
-/// The screen the mouse pointer is on (falls back to the main screen).
 @MainActor func screenUnderCursor() -> NSScreen? {
     if let p = CGEvent(source: nil)?.location {
         var id: CGDirectDisplayID = 0
@@ -158,7 +148,6 @@ func negateAxis2(_ e: CGEvent) {
     e.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: -p)
 }
 
-/// Pixels to scroll for one wheel event on one axis.
 func pixels(line: Double, point: Double) -> Double {
     let ref = point != 0 ? point : line
     if ref == 0 { return 0 }
