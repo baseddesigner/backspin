@@ -60,7 +60,7 @@ git pull
 ./install.sh
 ```
 
-Updates keep the Accessibility permission. The first install creates a signing certificate on your Mac, in `signing/`, and every rebuild reuses it, so macOS recognises each new build as the same app.
+Updates keep the Accessibility permission. The first install creates a signing certificate in `~/Library/Application Support/Backspin`, and every rebuild reuses it, so macOS recognises each new build as the same app. Because it's outside the cloned folder, re-cloning doesn't affect it.
 
 ## Settings
 
@@ -104,7 +104,7 @@ tccutil reset Accessibility io.github.baseddesigner.backspin
 ```
 
 **It stopped working after I rebuilt it.**
-The `signing/` folder was probably deleted, so the installer made a new certificate and macOS treats the build as a different app. Remove Backspin from the Accessibility list and add it again. Keep `signing/` from then on.
+`~/Library/Application Support/Backspin` was probably deleted, so the installer made a new certificate and macOS treats the build as a different app. Remove Backspin from the Accessibility list and add it again.
 
 **Scrolling feels doubled, too fast, or reversed twice.**
 Another scroll tool is probably running too, such as Mos, Scroll Reverser, Mac Mouse Fix or Logitech Options+. Quit it, or turn off its smoothing and scroll reversing.
@@ -133,7 +133,7 @@ Accessibility access is powerful, so here is exactly what Backspin does with it:
 - **It only sees scroll events.** The event tap asks macOS for scroll-wheel events and nothing else. Backspin never receives keystrokes, clicks or pointer movement.
 - **It never goes online.** There's no networking code at all. You can check with `grep -nE 'URLSession|Network|socket' main.swift`, which finds nothing.
 - **It writes almost nothing.** Its only file is a short log at `/tmp/backspin.log`, plus your settings if you change any.
-- **Your signing key stays on your Mac.** The certificate in `signing/` is created locally, only signs this app, and is excluded from git.
+- **Your signing key stays on your Mac.** The certificate is created locally in `~/Library/Application Support/Backspin`, outside the repository, and only signs this app.
 
 ## Uninstall
 
@@ -141,7 +141,7 @@ Accessibility access is powerful, so here is exactly what Backspin does with it:
 ./install.sh uninstall
 ```
 
-That stops Backspin and removes the app and its login entry. Then remove Backspin from **Privacy & Security → Accessibility**. To clear everything, also run `defaults delete io.github.baseddesigner.backspin` and delete the cloned folder, including `signing/`.
+That stops Backspin and removes the app and its login entry. Then remove Backspin from **Privacy & Security → Accessibility**. To clear everything, also run `defaults delete io.github.baseddesigner.backspin`, delete `~/Library/Application Support/Backspin` and delete the cloned folder.
 
 ## How it works
 

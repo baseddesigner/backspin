@@ -15,7 +15,7 @@ UID_=$(id -u)
 if [[ "${1:-}" == "uninstall" ]]; then
   launchctl bootout "gui/$UID_/$LABEL" 2>/dev/null || true
   rm -f "$AGENT"
-  rm -rf "$APP"   # signing/ is kept so a reinstall reuses the same certificate
+  rm -rf "$APP"   # the signing key is kept so a reinstall keeps the Accessibility permission
   echo "$NAME removed. You can also remove it from System Settings → Privacy & Security → Accessibility."
   exit 0
 fi
@@ -42,14 +42,18 @@ cat > "$APP/Contents/Info.plist" <<EOF
 </dict></plist>
 EOF
 
-# Sign with a fixed, self-signed certificate (created once, kept in ./signing/)
-# so macOS recognises rebuilds as the same app and keeps the Accessibility permission.
-# The certificate is personal to your Mac; never commit signing/.
-KC="$PWD/signing/backspin.keychain-db"
+# Sign with a fixed, self-signed certificate so macOS recognises rebuilds as the
+# same app and keeps the Accessibility permission. It lives outside the clone, so
+# re-cloning or `git clean` can't lose it and git can't pick it up.
+SUPPORT="$HOME/Library/Application Support/$NAME"
+KC="$SUPPORT/backspin.keychain-db"
 CERT_NAME="$NAME Local Signing"
+mkdir -p "$SUPPORT"
+if [[ ! -f "$KC" && -f signing/backspin.keychain-db ]]; then
+  mv signing/backspin.keychain-db "$KC" && rm -rf signing   # from installs before it moved
+fi
 if [[ ! -f "$KC" ]]; then
   echo "Creating signing certificate (one time)…"
-  mkdir -p signing
   tmp=$(mktemp -d)
   cat > "$tmp/cert.cnf" <<EOF
 [req]
