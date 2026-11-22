@@ -1,0 +1,21 @@
+#!/bin/zsh
+# Runs the checks on this Mac before every push. Turn on with:
+#   git config core.hooksPath .githooks
+# The install test reinstalls Backspin, so it only runs when the pushed commits
+# touch main.swift, install.sh or tests/ (or when that can't be told).
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+./tests/check.sh || { print -u2 "Push stopped: fix the check above."; exit 1; }
+
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha _ remote_sha; do
+  [[ $local_sha == $zero ]] && continue # deleting a branch
+  if [[ $remote_sha != $zero ]] && changed=$(git diff --name-only "$remote_sha" "$local_sha" 2>/dev/null) &&
+     ! grep -qE '^(main\.swift|install\.sh|tests/)' <<< "$changed"; then
+    continue
+  fi
+  ./tests/e2e.sh || { print -u2 "Push stopped: fix the install test above."; exit 1; }
+  exit 0
+done
+exit 0
