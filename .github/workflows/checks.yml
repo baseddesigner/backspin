@@ -1,0 +1,16 @@
+name: checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - name: Lint and Swift 6 build
+        run: ./tests/check.sh
+      - name: Install end to end
+        run: ./tests/e2e.sh

@@ -76,8 +76,6 @@ func log(_ s: String) {
     private var lastTarget: CFTimeInterval = 0
     private var frameDuration = 1.0 / 60.0
 
-    nonisolated override init() { super.init() }
-
     func add(dx: Double, dy: Double, flags: CGEventFlags) {
         // Reversing direction mid-glide: drop the old momentum so it feels snappy.
         if dy != 0, pendingY != 0, (dy > 0) != (pendingY > 0) { pendingY = 0; residY = 0 }
@@ -138,7 +136,7 @@ func log(_ s: String) {
     }
 }
 
-@MainActor let smoother = Smoother()
+let smoother = Smoother()
 
 // MARK: - Event tap
 
@@ -167,7 +165,8 @@ func pixels(line: Double, point: Double) -> Double {
     return (ref > 0 ? 1 : -1) * max(abs(point) * cfg.speed, cfg.step)
 }
 
-@MainActor func handleWheel(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+/// Returns true when the event was swallowed (it will be re-posted as smooth pixel steps).
+@MainActor func handleWheel(_ event: CGEvent) -> Bool {
     var ly = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis1))
     var lx = Double(event.getIntegerValueField(.scrollWheelEventDeltaAxis2))
     var py = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
@@ -186,7 +185,7 @@ func pixels(line: Double, point: Double) -> Double {
     if !cfg.smooth || zoomish {
         if cfg.reverseVertical { negateAxis1(event) }
         if cfg.reverseHorizontal { negateAxis2(event) }
-        return Unmanaged.passUnretained(event)
+        return false
     }
 
     var dy = pixels(line: ly, point: py)
@@ -199,25 +198,31 @@ func pixels(line: Double, point: Double) -> Double {
         outFlags.remove(.maskShift)
     }
     smoother.add(dx: dx, dy: dy, flags: outFlags)
-    return nil // swallow the original notch
+    return true
 }
 
 var tap: CFMachPort?
 
-let callback: CGEventTapCallBack = { _, type, event, _ in
+@MainActor func handleTap(_ type: CGEventType, _ event: CGEvent) -> Bool {
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
         if let t = tap { CGEvent.tapEnable(tap: t, enable: true) }
         log("tap re-enabled after \(type == .tapDisabledByTimeout ? "timeout" : "user input")")
-        return Unmanaged.passUnretained(event)
+        return false
     }
     guard type == .scrollWheel,
           event.getIntegerValueField(.eventSourceUserData) != MAGIC,
           event.getIntegerValueField(.scrollWheelEventIsContinuous) == 0 // trackpad / Magic Mouse
-    else { return Unmanaged.passUnretained(event) }
-    return MainActor.assumeIsolated { handleWheel(event) } // tap runs on the main run loop
+    else { return false }
+    return handleWheel(event)
 }
 
-func installTap() -> Bool {
+let callback: CGEventTapCallBack = { _, type, event, _ in
+    // The tap's run loop source is on the main run loop, so this always runs on the main thread.
+    let swallowed = MainActor.assumeIsolated { handleTap(type, event) }
+    return swallowed ? nil : Unmanaged.passUnretained(event)
+}
+
+@MainActor func installTap() -> Bool {
     let mask = CGEventMask(1 << CGEventType.scrollWheel.rawValue)
     guard let t = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
                                     options: .defaultTap, eventsOfInterest: mask,
@@ -226,19 +231,19 @@ func installTap() -> Bool {
     let src = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, t, 0)
     CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
     CGEvent.tapEnable(tap: t, enable: true)
-    log("running — reverseV=\(cfg.reverseVertical) reverseH=\(cfg.reverseHorizontal) smooth=\(cfg.smooth) step=\(cfg.step) speed=\(cfg.speed) smoothing=\(cfg.smoothing)")
+    log("running")
     return true
 }
 
 // MARK: - Main
 
-let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+log("starting — \(cfg)")
+let promptKey = "AXTrustedCheckOptionPrompt" // value of kAXTrustedCheckOptionPrompt, a non-Sendable C global
 if !AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary) {
     log("waiting for Accessibility permission (System Settings → Privacy & Security → Accessibility)")
 }
 
-// Retry until permission is granted and the tap is created.
-func tryStart() {
+@MainActor func tryStart() {
     if AXIsProcessTrusted() && installTap() { return }
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { tryStart() }
 }

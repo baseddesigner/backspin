@@ -26,7 +26,7 @@ if (( ${$(sw_vers -productVersion)%%.*} < 14 )); then
 fi
 
 mkdir -p "$APP/Contents/MacOS" "$HOME/Library/LaunchAgents"
-xcrun swiftc -O main.swift -o "$APP/Contents/MacOS/$NAME"
+xcrun swiftc -swift-version 6 -O main.swift -o "$APP/Contents/MacOS/$NAME"
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

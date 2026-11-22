@@ -4,6 +4,7 @@
 
 **A tiny macOS helper that reverses and smooths scrolling for wheel mice, and leaves your trackpad alone.**
 
+[![checks](https://github.com/baseddesigner/backspin/actions/workflows/checks.yml/badge.svg)](https://github.com/baseddesigner/backspin/actions/workflows/checks.yml)
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white)](#install)
 [![Swift, one file](https://img.shields.io/badge/Swift-one_file-F05138?logo=swift&logoColor=white)](main.swift)
 [![No dependencies](https://img.shields.io/badge/dependencies-none-2ea44f)](#privacy-and-security)
@@ -169,9 +170,16 @@ Bug reports are very welcome. Please include:
 - what you expected and what happened
 - a few lines of `/tmp/backspin.log` with `debug` turned on.
 
-Fixes for specific mice or apps are welcome too.
+Fixes for specific mice or apps are welcome too. Before opening a pull request, run the checks that CI runs:
 
-To keep Backspin tiny, these are out of scope: a settings window or menu bar icon, extra files beyond `main.swift` and `install.sh`, and third-party dependencies.
+```bash
+./tests/check.sh   # Swift 6 build, privacy promises, no tracked signing key
+./tests/e2e.sh     # installs Backspin three times and checks it keeps its identity and reads settings
+```
+
+Each check exists because the mistake it catches really happened, or because this README promises it. `e2e.sh` reinstalls Backspin on your Mac.
+
+To keep Backspin tiny, these are out of scope: a settings window or menu bar icon, extra source files beyond `main.swift` and `install.sh`, and third-party dependencies.
 
 ## Status
 
