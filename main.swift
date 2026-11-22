@@ -8,7 +8,8 @@
 //   step              float  minimum pixels per wheel notch (default 35)
 //   speed             float  multiplier on the system's accelerated delta (default 3)
 //   smoothing         float  easing time constant in seconds (default 0.08; higher = glidier)
-// Run with --debug to log every wheel event.
+//   debug             bool   log every wheel event to the log file (default false)
+// Or run with --debug.
 
 import AppKit
 import QuartzCore
@@ -37,7 +38,7 @@ struct Config {
         n("speed", &c.speed)
         n("smoothing", &c.smoothing)
         c.smoothing = max(0.005, c.smoothing)
-        c.debug = CommandLine.arguments.contains("--debug")
+        c.debug = CommandLine.arguments.contains("--debug") || d.bool(forKey: "debug")
         return c
     }
 }
