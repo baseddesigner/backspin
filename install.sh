@@ -95,6 +95,8 @@ cat > "$AGENT" <<EOF
 EOF
 
 launchctl bootout "gui/$UID_/$LABEL" 2>/dev/null || true
+# bootout returns before the old copy has fully stopped; wait for it (up to 5 s).
+for _ in {1..50}; do launchctl print "gui/$UID_/$LABEL" >/dev/null 2>&1 || break; sleep 0.1; done
 launchctl bootstrap "gui/$UID_" "$AGENT"
 echo "$NAME installed at $APP and running. Log: $LOG"
 echo "First install? Turn it on in System Settings → Privacy & Security → Accessibility."
